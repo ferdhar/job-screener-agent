@@ -1,55 +1,76 @@
-import json
-
 from app.scraper import fetch_job_posting
 from app.extractor import extract_job_posting
 from app.matcher import match_resume_to_job
 from app.scorer import calculate_fit_score
+from app.state import AgentState
 
-def fetch_job(url: str) -> str:
+
+def fetch_job(state: AgentState) -> str:
     """
-    Fetch a job posting from a URL.
+    Fetch the job posting and store the raw text in agent state.
     """
-    return fetch_job_posting(url)
+
+    state.job_text = fetch_job_posting(state.job_url)
+
+    return state.job_text
 
 
-def extract_job(job_text: str) -> dict:
+def extract_job(state: AgentState) -> dict:
     """
-    Extract structured information from raw job-posting text.
+    Extract structured job information and store it in agent state.
     """
-    job = extract_job_posting(job_text)
 
-    return job.model_dump()
+    if state.job_text is None:
+        raise RuntimeError(
+            "Cannot extract job because job_text is not available."
+        )
+
+    state.job = extract_job_posting(state.job_text)
+
+    return state.job.model_dump()
 
 
-def match_resume(resume_text: str, job_data: dict) -> dict:
+def match_resume(state: AgentState) -> dict:
     """
-    Match a resume against structured job requirements.
+    Match the resume against the job stored in agent state.
     """
-    from app.models import JobPosting
 
-    job = JobPosting.model_validate(job_data)
+    if state.job is None:
+        raise RuntimeError(
+            "Cannot match resume because job data is not available."
+        )
 
-    match = match_resume_to_job(
-        resume_text=resume_text,
-        job=job,
+    state.match = match_resume_to_job(
+        resume_text=state.resume_text,
+        job=state.job,
     )
 
-    return match.model_dump()
+    return state.match.model_dump()
 
 
-def calculate_score(match_data: dict, job_data: dict) -> dict:
+def calculate_score(state: AgentState) -> dict:
     """
-    Calculate the candidate's fit score.
+    Calculate the fit score using the job and resume match
+    stored in agent state.
     """
-    from app.models import JobPosting, ResumeMatch
 
-    job = JobPosting.model_validate(job_data)
-    match = ResumeMatch.model_validate(match_data)
+    if state.job is None:
+        raise RuntimeError(
+            "Cannot calculate score because job data is not available."
+        )
 
-    return calculate_fit_score(
-        job=job,
-        match=match,
+    if state.match is None:
+        raise RuntimeError(
+            "Cannot calculate score because resume match is not available."
+        )
+
+    state.score = calculate_fit_score(
+        job=state.job,
+        match=state.match,
     )
+
+    return state.score
+
 
 TOOL_FUNCTIONS = {
     "fetch_job": fetch_job,

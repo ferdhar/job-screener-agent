@@ -1,8 +1,10 @@
+import json
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
 from app.tools import TOOL_FUNCTIONS
-
+from app.state import AgentState
 
 load_dotenv()
 
@@ -12,16 +14,14 @@ TOOLS = [
     {
         "type": "function",
         "name": "fetch_job",
-        "description": "Fetch the raw text of a job posting from a URL.",
+        "description": (
+            "Fetch the job posting specified by the user's job URL. "
+            "The fetched content is stored in agent state."
+        ),
         "parameters": {
             "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "The URL of the job posting.",
-                }
-            },
-            "required": ["url"],
+            "properties": {},
+            "required": [],
             "additionalProperties": False,
         },
         "strict": True,
@@ -29,16 +29,14 @@ TOOLS = [
     {
         "type": "function",
         "name": "extract_job",
-        "description": "Extract structured job information and individual requirements from raw job posting text.",
+        "description": (
+            "Extract structured job information and individual "
+            "requirements from the fetched job posting."
+        ),
         "parameters": {
             "type": "object",
-            "properties": {
-                "job_text": {
-                    "type": "string",
-                    "description": "Raw job posting text.",
-                }
-            },
-            "required": ["job_text"],
+            "properties": {},
+            "required": [],
             "additionalProperties": False,
         },
         "strict": True,
@@ -46,61 +44,14 @@ TOOLS = [
     {
         "type": "function",
         "name": "match_resume",
-        "description": "Compare a candidate resume against the structured job requirements.",
+        "description": (
+            "Compare the candidate resume against the structured "
+            "job requirements stored in agent state."
+        ),
         "parameters": {
             "type": "object",
-            "properties": {
-                "resume_text": {
-                    "type": "string",
-                    "description": "Candidate resume text.",
-                },
-                "job_data": {
-                    "type": "object",
-                    "description": "Structured job posting.",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "company": {"type": "string"},
-                        "location": {"type": "string"},
-                        "responsibilities": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "requirements": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "description": {"type": "string"},
-                                    "category": {"type": "string"},
-                                    "importance": {"type": "string"},
-                                },
-                                "required": [
-                                    "id",
-                                    "description",
-                                    "category",
-                                    "importance",
-                                ],
-                                "additionalProperties": False,
-                            },
-                        },
-                        "technical_skills": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                    "required": [
-                        "title",
-                        "company",
-                        "location",
-                        "responsibilities",
-                        "requirements",
-                        "technical_skills",
-                    ],
-                    "additionalProperties": False,
-                },
-            },
-            "required": ["resume_text", "job_data"],
+            "properties": {},
+            "required": [],
             "additionalProperties": False,
         },
         "strict": True,
@@ -108,107 +59,29 @@ TOOLS = [
     {
         "type": "function",
         "name": "calculate_score",
-        "description": "Calculate the candidate's fit score from the requirement matches.",
+        "description": (
+            "Calculate the candidate's fit score using the job "
+            "requirements and resume match stored in agent state."
+        ),
         "parameters": {
             "type": "object",
-            "properties": {
-                "match_data": {
-                    "type": "object",
-                    "description": "Structured resume match results.",
-                    "properties": {
-                        "requirement_matches": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "requirement_id": {"type": "string"},
-                                    "requirement": {"type": "string"},
-                                    "status": {"type": "string"},
-                                    "evidence": {"type": "string"},
-                                },
-                                "required": [
-                                    "requirement_id",
-                                    "requirement",
-                                    "status",
-                                    "evidence",
-                                ],
-                                "additionalProperties": False,
-                            },
-                        },
-                        "strengths": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "gaps": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                    "required": [
-                        "requirement_matches",
-                        "strengths",
-                        "gaps",
-                    ],
-                    "additionalProperties": False,
-                },
-                "job_data": {
-                    "type": "object",
-                    "description": "Structured job posting.",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "company": {"type": "string"},
-                        "location": {"type": "string"},
-                        "responsibilities": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "requirements": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "description": {"type": "string"},
-                                    "category": {"type": "string"},
-                                    "importance": {"type": "string"},
-                                },
-                                "required": [
-                                    "id",
-                                    "description",
-                                    "category",
-                                    "importance",
-                                ],
-                                "additionalProperties": False,
-                            },
-                        },
-                        "technical_skills": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                    "required": [
-                        "title",
-                        "company",
-                        "location",
-                        "responsibilities",
-                        "requirements",
-                        "technical_skills",
-                    ],
-                    "additionalProperties": False,
-                },
-            },
-            "required": ["match_data", "job_data"],
+            "properties": {},
+            "required": [],
             "additionalProperties": False,
         },
         "strict": True,
     },
 ]
 
-
 def run_agent(job_url: str, resume_text: str):
     """
-    Run the job application screening agent.
+    Run the stateful job application screening agent.
     """
+
+    state = AgentState(
+        job_url=job_url,
+        resume_text=resume_text,
+    )
 
     input_items = [
         {
@@ -216,24 +89,23 @@ def run_agent(job_url: str, resume_text: str):
             "content": [
                 {
                     "type": "input_text",
-                    "text": f"""
+                    "text": """
 Screen this job application.
 
-JOB URL:
-{job_url}
-
-CANDIDATE RESUME:
-{resume_text}
-
 Use the available tools to:
+
 1. Fetch the job posting.
 2. Extract its structured requirements.
 3. Match the resume against every requirement.
 4. Calculate the candidate's fit score.
 
+The job URL and candidate resume are already available in agent state.
+
 Do not invent information.
 
 Use tools whenever the required information is available through them.
+
+Complete the entire screening workflow before giving the final answer.
 """,
                 }
             ],
@@ -247,12 +119,29 @@ Use tools whenever the required information is available through them.
             instructions="""
 You are a job application screening agent.
 
-You have access to tools that fetch job postings, extract requirements,
-match resumes, and calculate scores.
+You have access to tools that operate on shared agent state.
+
+The state contains:
+
+- the job URL
+- the candidate resume
+- fetched job text
+- structured job information
+- requirement-level resume matches
+- fit scores
 
 Reason about which tool should be called next.
 
 Do not fabricate job requirements or candidate experience.
+
+Follow the workflow:
+
+fetch_job
+→ extract_job
+→ match_resume
+→ calculate_score
+
+Do not skip required steps.
 
 Complete the screening workflow before giving the final answer.
 """,
@@ -269,18 +158,23 @@ Complete the screening workflow before giving the final answer.
         ]
 
         if not tool_calls:
-            return response.output_text
+
+            return {
+                "job": state.job.model_dump() if state.job else None,
+                "match": state.match.model_dump() if state.match else None,
+                "score": state.score,
+                "final_response": response.output_text,
+            }
 
         for tool_call in tool_calls:
 
             name = tool_call.name
-            arguments = json.loads(tool_call.arguments)
 
             print(f"\n[AGENT] Calling tool: {name}")
 
             function = TOOL_FUNCTIONS[name]
 
-            result = function(**arguments)
+            result = function(state)
 
             input_items.append(
                 {
