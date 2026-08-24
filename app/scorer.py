@@ -8,32 +8,43 @@ def calculate_fit_score(
     """
     Calculate a deterministic resume-to-job fit score.
 
-    Required requirements have a higher weight than preferred
-    requirements.
+    Requirement matching is connected using requirement IDs rather
+    than relying on list ordering.
     """
+
+    match_by_id = {
+        item.requirement_id: item
+        for item in match.requirement_matches
+    }
 
     required_matches = []
     preferred_matches = []
 
-    for requirement, result in zip(
-        job.requirements,
-        match.requirement_matches,
-    ):
+    for requirement in job.requirements:
+
+        result = match_by_id.get(requirement.id)
+
+        if result is None:
+            continue
+
         if requirement.importance == "required":
             required_matches.append(result)
         else:
             preferred_matches.append(result)
 
     def score_matches(matches):
+
         if not matches:
             return 100.0
 
         points = 0
 
-        for match in matches:
-            if match.status == "matched":
+        for result in matches:
+
+            if result.status == "matched":
                 points += 1
-            elif match.status == "partial":
+
+            elif result.status == "partial":
                 points += 0.5
 
         return (points / len(matches)) * 100
@@ -41,7 +52,6 @@ def calculate_fit_score(
     required_score = score_matches(required_matches)
     preferred_score = score_matches(preferred_matches)
 
-    # Required qualifications are weighted more heavily.
     overall_score = (
         required_score * 0.75
         + preferred_score * 0.25

@@ -31,6 +31,13 @@ def extract_job_posting(job_text: str) -> JobPosting:
         For every requirement:
 
         - Write a concise description of ONE requirement.
+
+        - Give every requirement a unique sequential ID:
+          REQ-001
+          REQ-002
+          REQ-003
+          ...
+
         - Assign one category:
           education
           experience
@@ -86,9 +93,65 @@ def extract_job_posting(job_text: str) -> JobPosting:
         9. Technical skills should be extracted separately, but do not
           treat a technical skill as a required qualification unless
           the job posting explicitly makes it a requirement.
+
+          IMPORTANT REQUIREMENT GROUPING RULES:
+
+            Extract qualifications at the level of meaningful candidate
+            requirements, not individual technologies or examples.
+
+            Do NOT split one requirement into multiple requirements merely
+            because it contains several examples.
+
+            For example:
+
+            "Strong knowledge of AI-assisted coding tools such as
+            Claude Code, Codex, or OpenCode"
+
+            must remain ONE requirement.
+
+            Similarly:
+
+            "Strong knowledge of agentic AI fundamentals such as MCP
+            servers, tool-calling loops, embeddings, vector databases,
+            skills and context engineering"
+
+            must remain ONE requirement.
+
+            Similarly:
+
+            "Experience developing AI agents that interact with APIs,
+            databases, or external tools"
+
+            must remain ONE requirement.
+
+            Similarly:
+
+            "Demonstrated initiative through research projects,
+            internships, open-source contributions, or personal projects
+            involving LLMs or agentic AI systems"
+
+            must remain ONE requirement.
+
+            Treat tools, technologies, and examples listed within a
+            requirement as supporting concepts rather than separate
+            requirements.
+
+            Only create a separate requirement when the job posting
+            expresses a genuinely distinct qualification.
+        
+          Aim for approximately 10–20 meaningful requirements for a
+          typical technical job posting.
+
+          Do not create dozens of requirements simply by splitting
+          sentences into individual technologies.
         """,
         input=job_text,
         text_format=JobPosting,
     )
 
-    return response.output_parsed
+    job = response.output_parsed
+
+    for index, requirement in enumerate(job.requirements, start=1):
+        requirement.id = f"REQ-{index:03d}"
+
+    return job

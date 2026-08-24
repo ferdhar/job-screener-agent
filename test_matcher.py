@@ -58,7 +58,8 @@ for item in match.requirement_matches:
         "missing": "✗",
     }[item.status]
 
-    print(f"\n{symbol} {item.status.upper()}")
+    print(f"\n[{item.requirement_id}]")
+    print(f"{symbol} {item.status.upper()}")
     print(f"Requirement: {item.requirement}")
     print(f"Evidence: {item.evidence}")
 

@@ -6,7 +6,7 @@ load_dotenv()
 client = OpenAI()
 
 response = client.responses.create(
-    model="gpt-5.5",
+    model="gpt-5.6-luna",
     instructions="You are a helpful job application assistant.",
     input="Explain what an AI research engineer does in one sentence."
 )

@@ -3,6 +3,7 @@ from typing import Literal
 
 
 class Requirement(BaseModel):
+    id: str
     description: str
     category: Literal[
         "education",
@@ -18,7 +19,6 @@ class Requirement(BaseModel):
         "preferred",
     ]
 
-
 class JobPosting(BaseModel):
     title: str
     company: str
@@ -29,6 +29,7 @@ class JobPosting(BaseModel):
 
 
 class RequirementMatch(BaseModel):
+    requirement_id: str
     requirement: str
     status: Literal[
         "matched",

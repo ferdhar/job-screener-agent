@@ -18,11 +18,12 @@ def match_resume_to_job(
     """
 
     requirements = "\n".join(
-        f"- [{r.importance.upper()}] "
-        f"[{r.category}] "
-        f"{r.description}"
-        for r in job.requirements
-    )
+                            f"- [{r.id}] "
+                            f"[{r.importance.upper()}] "
+                            f"[{r.category}] "
+                            f"{r.description}"
+                            for r in job.requirements
+                            )
 
     response = client.responses.parse(
         model="gpt-5.6-luna",
@@ -30,6 +31,15 @@ def match_resume_to_job(
         You are a careful resume screening system.
 
         Compare the candidate's resume against every job requirement.
+
+        For every requirement, return the exact requirement ID provided
+        in the job requirements.
+
+        Do not create new IDs.
+
+        Do not omit requirements.
+
+        Every requirement must have exactly one corresponding match.
 
         For each requirement, classify it as:
 
