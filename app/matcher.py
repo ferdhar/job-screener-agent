@@ -3,10 +3,17 @@ from openai import OpenAI
 
 from app.models import JobPosting, ResumeMatch
 
-
 load_dotenv()
 
-client = OpenAI()
+client = None
+
+def get_client():
+    global client
+
+    if client is None:
+        client = OpenAI()
+
+    return client
 
 
 def match_resume_to_job(
@@ -25,6 +32,8 @@ def match_resume_to_job(
                             for r in job.requirements
                             )
 
+    client = get_client()
+    
     response = client.responses.parse(
         model="gpt-5.6-luna",
         instructions="""

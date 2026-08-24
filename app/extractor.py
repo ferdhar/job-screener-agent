@@ -3,16 +3,23 @@ from openai import OpenAI
 
 from app.models import JobPosting
 
-
 load_dotenv()
+client = None
 
-client = OpenAI()
+def get_client():
+    global client
 
+    if client is None:
+        client = OpenAI()
+
+    return client
 
 def extract_job_posting(job_text: str) -> JobPosting:
     """
     Convert raw job-posting text into structured job information.
     """
+    
+    client = get_client()
 
     response = client.responses.parse(
         model="gpt-5.6-luna",
