@@ -9,25 +9,43 @@ def fetch_job(state: AgentState) -> str:
     """
     Fetch the job posting and store the raw text in agent state.
     """
+    try:
+        result = fetch_job_posting(state.job_url)
+        state.job_text = result
 
-    state.job_text = fetch_job_posting(state.job_url)
+        return tool_success(result)
 
-    return state.job_text
+    except Exception as exc:
+        return tool_error(
+            error_type=type(exc).__name__,
+            message=str(exc),
+            retryable=True,
+        )
 
 
 def extract_job(state: AgentState) -> dict:
     """
     Extract structured job information and store it in agent state.
     """
-
     if state.job_text is None:
-        raise RuntimeError(
-            "Cannot extract job because job_text is not available."
+        return tool_error(
+            error_type="MissingJobText",
+            message="Cannot extract job because job_text is not available.",
+            retryable=False,
         )
 
-    state.job = extract_job_posting(state.job_text)
+    try:
+        job = extract_job_posting(state.job_text)
+        state.job = job
 
-    return state.job.model_dump()
+        return tool_success(job.model_dump())
+
+    except Exception as exc:
+        return tool_error(
+            error_type=type(exc).__name__,
+            message=str(exc),
+            retryable=False,
+        )
 
 
 def match_resume(state: AgentState) -> dict:
@@ -36,16 +54,28 @@ def match_resume(state: AgentState) -> dict:
     """
 
     if state.job is None:
-        raise RuntimeError(
-            "Cannot match resume because job data is not available."
+        return tool_error(
+            error_type="MissingJobData",
+            message="Cannot match resume because job data is not available.",
+            retryable=False,
         )
 
-    state.match = match_resume_to_job(
-        resume_text=state.resume_text,
-        job=state.job,
-    )
+    try:
+        state.match = match_resume_to_job(
+            resume_text=state.resume_text,
+            job=state.job,
+        )
 
-    return state.match.model_dump()
+        return tool_success(
+            state.match.model_dump()
+        )
+
+    except Exception as exc:
+        return tool_error(
+            error_type=type(exc).__name__,
+            message=f"Failed to match resume: {exc}",
+            retryable=True,
+        )
 
 
 def calculate_score(state: AgentState) -> dict:
@@ -55,22 +85,55 @@ def calculate_score(state: AgentState) -> dict:
     """
 
     if state.job is None:
-        raise RuntimeError(
-            "Cannot calculate score because job data is not available."
+        return tool_error(
+            error_type="MissingJobData",
+            message="Cannot calculate score because job data is not available.",
+            retryable=False,
         )
 
     if state.match is None:
-        raise RuntimeError(
-            "Cannot calculate score because resume match is not available."
+        return tool_error(
+            error_type="MissingResumeMatch",
+            message="Cannot calculate score because resume match is not available.",
+            retryable=False,
         )
 
-    state.score = calculate_fit_score(
-        job=state.job,
-        match=state.match,
-    )
+    try:
+        state.score = calculate_fit_score(
+            job=state.job,
+            match=state.match,
+        )
 
-    return state.score
+        return tool_success(
+            state.score
+        )
 
+    except Exception as exc:
+        return tool_error(
+            error_type=type(exc).__name__,
+            message=f"Failed to calculate score: {exc}",
+            retryable=False,
+        )
+
+
+def tool_success(data):
+    return {
+        "ok": True,
+        "data": data,
+        "error": None,
+    }
+
+
+def tool_error(error_type, message, retryable=False):
+    return {
+        "ok": False,
+        "data": None,
+        "error": {
+            "type": error_type,
+            "message": message,
+            "retryable": retryable,
+        },
+    }
 
 TOOL_FUNCTIONS = {
     "fetch_job": fetch_job,
